@@ -1,98 +1,494 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useEffect, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  Image,
+  Dimensions,
+  StyleSheet,
+  Animated,
+  Pressable,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../../theme/useTheme";
+import { products, heroPhrases } from "../../constants/products";
+import { images } from "../../constants/images";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+const { width } = Dimensions.get("window");
+const CARD_WIDTH = width * 0.7;
+const SPACING = 16;
+
+const TypingHeader = () => {
+  const { theme } = useTheme();
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [displayText, setDisplayText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const charIndex = useRef(0);
+
+  useEffect(() => {
+    const currentPhrase = heroPhrases[phraseIndex];
+
+    const timer = setTimeout(
+      () => {
+        if (!isDeleting) {
+          if (charIndex.current < currentPhrase.length) {
+            setDisplayText(currentPhrase.slice(0, charIndex.current + 1));
+            charIndex.current += 1;
+          } else {
+            setTimeout(() => setIsDeleting(true), 2000);
+          }
+        } else {
+          if (charIndex.current > 0) {
+            setDisplayText(currentPhrase.slice(0, charIndex.current - 1));
+            charIndex.current -= 1;
+          } else {
+            setIsDeleting(false);
+            setPhraseIndex((prev) => (prev + 1) % heroPhrases.length);
+          }
+        }
+      },
+      isDeleting ? 40 : 80,
+    );
+
+    return () => clearTimeout(timer);
+  }, [displayText, isDeleting, phraseIndex]);
+
+  return (
+    <View style={styles.headerContainer}>
+      <Text style={[styles.brandName, { color: theme.colors.accent }]}>
+        SCENT & SILK
+      </Text>
+      <View style={styles.typingRow}>
+        <Text style={[styles.typingText, { color: theme.colors.text }]}>
+          {displayText}
+        </Text>
+        <View style={[styles.cursor, { backgroundColor: theme.colors.cta }]} />
+      </View>
+    </View>
+  );
+};
+
+const MovingImageCards = () => {
+  const { theme } = useTheme();
+  const router = useRouter();
+  const flatListRef = useRef<FlatList>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const nextIndex = (currentIndex + 1) % products.length;
+      flatListRef.current?.scrollToIndex({
+        index: nextIndex,
+        animated: true,
+        viewPosition: 0.5,
+      });
+      setCurrentIndex(nextIndex);
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [currentIndex]);
+
+  return (
+    <View style={styles.carouselContainer}>
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+          Featured Scents
+        </Text>
+        <Ionicons name="sparkles" size={18} color={theme.colors.cta} />
+      </View>
+      <Animated.FlatList
+        ref={flatListRef}
+        data={products}
+        keyExtractor={(item) => item.id}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={CARD_WIDTH + SPACING}
+        decelerationRate="fast"
+        contentContainerStyle={styles.carouselContent}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+          { useNativeDriver: false },
+        )}
+        scrollEventThrottle={16}
+        renderItem={({ item, index }) => {
+          const inputRange = [
+            (index - 1) * (CARD_WIDTH + SPACING),
+            index * (CARD_WIDTH + SPACING),
+            (index + 1) * (CARD_WIDTH + SPACING),
+          ];
+
+          const scale = scrollX.interpolate({
+            inputRange,
+            outputRange: [0.92, 1, 0.92],
+            extrapolate: "clamp",
+          });
+
+          return (
+            <Pressable
+              onPress={() => router.push(`/product/${item.id}`)}
+              style={{ width: CARD_WIDTH }}
+            >
+              <Animated.View
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    transform: [{ scale }],
+                  },
+                ]}
+              >
+                <Image
+                  source={{ uri: item.image }}
+                  style={styles.cardImage}
+                  resizeMode="cover"
+                />
+                <LinearGradient
+                  colors={["transparent", "rgba(0,0,0,0.75)"]}
+                  style={styles.cardGradient}
+                >
+                  <View style={styles.cardContent}>
+                    <Text style={styles.cardBrand}>{item.brand}</Text>
+                    <Text style={styles.cardName}>{item.name}</Text>
+                    <View style={styles.cardRow}>
+                      <Text style={styles.cardPrice}>
+                        ${item.price.toFixed(2)}
+                      </Text>
+                      <View
+                        style={[
+                          styles.categoryBadge,
+                          { backgroundColor: theme.colors.cta },
+                        ]}
+                      >
+                        <Text style={styles.categoryText}>{item.volume}ml</Text>
+                      </View>
+                    </View>
+                    <View style={styles.notesRow}>
+                      {item.notes.slice(0, 3).map((note, i) => (
+                        <View
+                          key={i}
+                          style={[
+                            styles.noteBadge,
+                            { borderColor: "rgba(255,255,255,0.4)" },
+                          ]}
+                        >
+                          <Text style={styles.noteText}>{note}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                </LinearGradient>
+              </Animated.View>
+            </Pressable>
+          );
+        }}
+      />
+    </View>
+  );
+};
+
+const CategoryPills = () => {
+  const { theme } = useTheme();
+  const categories = [
+    { label: "Floral", icon: "flower-outline" as const },
+    { label: "Woody", icon: "leaf-outline" as const },
+    { label: "Fresh", icon: "water-outline" as const },
+    { label: "Oriental", icon: "moon-outline" as const },
+    { label: "Gourmand", icon: "flame-outline" as const },
+  ];
+
+  return (
+    <View style={styles.categoriesContainer}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+        Shop by Mood
+      </Text>
+      <FlatList
+        data={categories}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.categoriesContent}
+        renderItem={({ item }) => (
+          <Pressable
+            style={[
+              styles.categoryPill,
+              {
+                backgroundColor: theme.colors.primary,
+                borderColor: theme.colors.border,
+              },
+            ]}
+          >
+            <Ionicons name={item.icon} size={18} color={theme.colors.accent} />
+            <Text
+              style={[
+                styles.categoryLabel,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
+              {item.label}
+            </Text>
+          </Pressable>
+        )}
+      />
+    </View>
+  );
+};
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const { theme } = useTheme();
+  const router = useRouter();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  return (
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      <FlatList
+        data={products}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        columnWrapperStyle={styles.gridRow}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <>
+            <TypingHeader />
+            <MovingImageCards />
+            <CategoryPills />
+            <View style={styles.collectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+                New Arrivals
+              </Text>
+              <Pressable onPress={() => router.push("/discover")}>
+                <Text style={[styles.viewAll, { color: theme.colors.cta }]}>
+                  View all
+                </Text>
+              </Pressable>
+            </View>
+          </>
+        }
+        renderItem={({ item }) => (
+          <Pressable
+            style={[styles.gridCard, { backgroundColor: theme.colors.surface }]}
+            onPress={() => router.push(`/product/${item.id}`)}
+          >
+            <Image
+              source={{ uri: item.image }}
+              style={styles.gridImage}
+              resizeMode="cover"
+            />
+            <View style={styles.gridContent}>
+              <Text
+                style={[
+                  styles.gridBrand,
+                  { color: theme.colors.textSecondary },
+                ]}
+                numberOfLines={1}
+              >
+                {item.brand}
+              </Text>
+              <Text
+                style={[styles.gridName, { color: theme.colors.primary }]}
+                numberOfLines={1}
+              >
+                {item.name}
+              </Text>
+              <Text style={[styles.gridPrice, { color: theme.colors.cta }]}>
+                ${item.price.toFixed(2)}
+              </Text>
+            </View>
+          </Pressable>
+        )}
+        contentContainerStyle={styles.listContent}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  listContent: {
+    paddingBottom: 100,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  headerContainer: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  brandName: {
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 6,
+    marginBottom: 12,
+  },
+  typingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 36,
+  },
+  typingText: {
+    fontSize: 26,
+    fontWeight: "300",
+    letterSpacing: 0.5,
+  },
+  cursor: {
+    width: 2,
+    height: 26,
+    marginLeft: 2,
+    opacity: 0.8,
+  },
+  carouselContainer: {
+    paddingVertical: 20,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    letterSpacing: 0.3,
+  },
+  carouselContent: {
+    paddingHorizontal: (width - CARD_WIDTH) / 2,
+    gap: SPACING,
+  },
+  card: {
+    borderRadius: 24,
+    overflow: "hidden",
+    height: CARD_WIDTH * 1.25,
+  },
+  cardImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  cardGradient: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end",
+    padding: 20,
+  },
+  cardContent: {
+    gap: 6,
+  },
+  cardBrand: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+    fontWeight: "500",
+    letterSpacing: 3,
+    textTransform: "uppercase",
+  },
+  cardName: {
+    color: "#FFFFFF",
+    fontSize: 24,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
+  cardRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  cardPrice: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  categoryBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  categoryText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  notesRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 8,
+  },
+  noteBadge: {
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  noteText: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 11,
+    fontWeight: "400",
+  },
+  categoriesContainer: {
+    paddingVertical: 12,
+  },
+  categoriesContent: {
+    paddingHorizontal: 20,
+    gap: 10,
+    marginTop: 12,
+  },
+  categoryPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 25,
+    borderWidth: 1,
+  },
+  categoryLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  collectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  viewAll: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  gridRow: {
+    paddingHorizontal: 20,
+    gap: 12,
+    marginBottom: 12,
+  },
+  gridCard: {
+    flex: 1,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  gridImage: {
+    width: "100%",
+    height: 160,
+  },
+  gridContent: {
+    padding: 12,
+    gap: 2,
+  },
+  gridBrand: {
+    fontSize: 10,
+    fontWeight: "500",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+  gridName: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  gridPrice: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginTop: 2,
   },
 });
