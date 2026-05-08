@@ -13,6 +13,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme/useTheme";
 import { products } from "../constants/products";
+import { getImageSource } from "../constants/images";
+import { formatCurrency } from "../constants/shop";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 52) / 2;
@@ -102,7 +104,7 @@ export default function SearchScreen() {
             onPress={() => router.push(`/product/${item.id}`)}
           >
             <Image
-              source={{ uri: item.image }}
+              source={getImageSource(item.image)}
               style={styles.image}
               resizeMode="cover"
             />
@@ -120,7 +122,7 @@ export default function SearchScreen() {
                 {item.name}
               </Text>
               <Text style={[styles.price, { color: theme.colors.cta }]}>
-                ${item.price.toFixed(2)}
+                {formatCurrency(item.price)}
               </Text>
             </View>
           </Pressable>
@@ -139,7 +141,7 @@ export default function SearchScreen() {
                   { color: theme.colors.textSecondary },
                 ]}
               >
-                No results found for "{query}"
+                No results found for &quot;{query}&quot;
               </Text>
             </View>
           ) : (

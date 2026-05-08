@@ -1,3 +1,5 @@
+import { ImageSourcePropType } from "react-native";
+
 export interface Product {
   id: string;
   name: string;
@@ -5,7 +7,7 @@ export interface Product {
   price: number;
   description: string;
   notes: string[];
-  image: string;
+  image: ImageSourcePropType | string;
   category: "floral" | "woody" | "fresh" | "oriental" | "gourmand";
   volume: number;
 }
@@ -16,6 +18,7 @@ export interface CartItem {
 }
 
 export type ThemeName =
+  | "noir"
   | "aubergine"
   | "rose"
   | "midnight"

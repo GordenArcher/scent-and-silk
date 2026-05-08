@@ -6,13 +6,14 @@ import {
   Image,
   StyleSheet,
   Pressable,
-  Alert,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../theme/useTheme";
-import { getCart, saveCart, clearCart } from "../../storage/storage";
+import { getCart, saveCart } from "../../storage/storage";
 import { CartItem } from "../../types";
+import { getImageSource } from "../../constants/images";
+import { formatCurrency } from "../../constants/shop";
 
 export default function CartScreen() {
   const { theme } = useTheme();
@@ -83,7 +84,7 @@ export default function CartScreen() {
             style={[styles.cartItem, { backgroundColor: theme.colors.surface }]}
           >
             <Image
-              source={{ uri: item.product.image }}
+              source={getImageSource(item.product.image)}
               style={styles.itemImage}
               resizeMode="cover"
             />
@@ -108,7 +109,7 @@ export default function CartScreen() {
                 {item.product.volume}ml
               </Text>
               <Text style={[styles.itemPrice, { color: theme.colors.cta }]}>
-                ${(item.product.price * item.quantity).toFixed(2)}
+                {formatCurrency(item.product.price * item.quantity)}
               </Text>
             </View>
             <View style={styles.quantityControls}>
@@ -182,7 +183,7 @@ export default function CartScreen() {
               Subtotal
             </Text>
             <Text style={[styles.totalAmount, { color: theme.colors.text }]}>
-              ${subtotal.toFixed(2)}
+              {formatCurrency(subtotal)}
             </Text>
           </View>
           <Pressable

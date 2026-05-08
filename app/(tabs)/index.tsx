@@ -4,6 +4,7 @@ import {
   Text,
   FlatList,
   Image,
+  ImageBackground,
   Dimensions,
   StyleSheet,
   Animated,
@@ -14,7 +15,8 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../../theme/useTheme";
 import { products, heroPhrases } from "../../constants/products";
-import { images } from "../../constants/images";
+import { getImageSource, images } from "../../constants/images";
+import { formatCurrency, shop } from "../../constants/shop";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.7;
@@ -58,7 +60,7 @@ const TypingHeader = () => {
   return (
     <View style={styles.headerContainer}>
       <Text style={[styles.brandName, { color: theme.colors.accent }]}>
-        SCENT & SILK
+        {shop.name.toUpperCase()}
       </Text>
       <View style={styles.typingRow}>
         <Text style={[styles.typingText, { color: theme.colors.text }]}>
@@ -141,7 +143,7 @@ const MovingImageCards = () => {
                 ]}
               >
                 <Image
-                  source={{ uri: item.image }}
+                  source={getImageSource(item.image)}
                   style={styles.cardImage}
                   resizeMode="cover"
                 />
@@ -154,7 +156,7 @@ const MovingImageCards = () => {
                     <Text style={styles.cardName}>{item.name}</Text>
                     <View style={styles.cardRow}>
                       <Text style={styles.cardPrice}>
-                        ${item.price.toFixed(2)}
+                        {formatCurrency(item.price)}
                       </Text>
                       <View
                         style={[
@@ -166,17 +168,19 @@ const MovingImageCards = () => {
                       </View>
                     </View>
                     <View style={styles.notesRow}>
-                      {item.notes.slice(0, 3).map((note, i) => (
-                        <View
-                          key={i}
-                          style={[
-                            styles.noteBadge,
-                            { borderColor: "rgba(255,255,255,0.4)" },
-                          ]}
-                        >
-                          <Text style={styles.noteText}>{note}</Text>
-                        </View>
-                      ))}
+                      {item.notes
+                        .slice(0, 3)
+                        .map((note: string, i: number) => (
+                          <View
+                            key={i}
+                            style={[
+                              styles.noteBadge,
+                              { borderColor: "rgba(255,255,255,0.4)" },
+                            ]}
+                          >
+                            <Text style={styles.noteText}>{note}</Text>
+                          </View>
+                        ))}
                     </View>
                   </View>
                 </LinearGradient>
@@ -185,6 +189,59 @@ const MovingImageCards = () => {
           );
         }}
       />
+    </View>
+  );
+};
+
+const PromoBanners = () => {
+  const { theme } = useTheme();
+  const router = useRouter();
+  const banners = [
+    {
+      title: "Layered warmth",
+      subtitle: "Oud, amber, sandalwood",
+      image: images.banners.woody,
+      target: "/discover" as const,
+    },
+    {
+      title: "Soft florals",
+      subtitle: "Rose, jasmine, peony",
+      image: images.banners.floral,
+      target: "/discover" as const,
+    },
+  ];
+
+  return (
+    <View style={styles.bannerSection}>
+      {banners.map((banner) => (
+        <Pressable
+          key={banner.title}
+          onPress={() => router.push(banner.target)}
+          style={styles.bannerPressable}
+        >
+          <ImageBackground
+            source={getImageSource(banner.image)}
+            style={styles.bannerBg}
+            imageStyle={styles.bannerImage}
+            resizeMode="cover"
+          >
+            <LinearGradient
+              colors={["rgba(0,0,0,0.12)", "rgba(0,0,0,0.68)"]}
+              style={styles.bannerOverlay}
+            >
+              <Text style={styles.bannerTitle}>{banner.title}</Text>
+              <Text
+                style={[
+                  styles.bannerSubtitle,
+                  { color: theme.colors.accent },
+                ]}
+              >
+                {banner.subtitle}
+              </Text>
+            </LinearGradient>
+          </ImageBackground>
+        </Pressable>
+      ))}
     </View>
   );
 };
@@ -254,6 +311,7 @@ export default function HomeScreen() {
             <TypingHeader />
             <MovingImageCards />
             <CategoryPills />
+            <PromoBanners />
             <View style={styles.collectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
                 New Arrivals
@@ -272,7 +330,7 @@ export default function HomeScreen() {
             onPress={() => router.push(`/product/${item.id}`)}
           >
             <Image
-              source={{ uri: item.image }}
+              source={getImageSource(item.image)}
               style={styles.gridImage}
               resizeMode="cover"
             />
@@ -293,7 +351,7 @@ export default function HomeScreen() {
                 {item.name}
               </Text>
               <Text style={[styles.gridPrice, { color: theme.colors.cta }]}>
-                ${item.price.toFixed(2)}
+                {formatCurrency(item.price)}
               </Text>
             </View>
           </Pressable>
@@ -445,6 +503,39 @@ const styles = StyleSheet.create({
   categoryLabel: {
     fontSize: 14,
     fontWeight: "500",
+  },
+  bannerSection: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    gap: 12,
+  },
+  bannerPressable: {
+    height: 148,
+    borderRadius: 18,
+    overflow: "hidden",
+  },
+  bannerBg: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  bannerImage: {
+    borderRadius: 18,
+  },
+  bannerOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    padding: 18,
+  },
+  bannerTitle: {
+    color: "#FFFFFF",
+    fontSize: 22,
+    fontWeight: "700",
+  },
+  bannerSubtitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginTop: 4,
+    textTransform: "uppercase",
   },
   collectionHeader: {
     flexDirection: "row",

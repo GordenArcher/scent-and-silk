@@ -13,13 +13,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../theme/useTheme";
 import { products } from "../../constants/products";
+import { getImageSource } from "../../constants/images";
+import { formatCurrency } from "../../constants/shop";
 import {
   getCart,
   saveCart,
   getWishlist,
   saveWishlist,
 } from "../../storage/storage";
-import { CartItem } from "../../types";
 
 const { width } = Dimensions.get("window");
 
@@ -34,13 +35,13 @@ export default function ProductDetailScreen() {
   const [isWishlisted, setIsWishlisted] = useState(false);
 
   useEffect(() => {
-    checkWishlist();
-  }, []);
+    const checkWishlist = async () => {
+      const wishlist = await getWishlist();
+      setIsWishlisted(wishlist.includes(id));
+    };
 
-  const checkWishlist = async () => {
-    const wishlist = await getWishlist();
-    setIsWishlisted(wishlist.includes(id));
-  };
+    checkWishlist();
+  }, [id]);
 
   const toggleWishlist = async () => {
     const wishlist = await getWishlist();
@@ -89,7 +90,7 @@ export default function ProductDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: product.image }}
+            source={getImageSource(product.image)}
             style={styles.image}
             resizeMode="cover"
           />
@@ -124,7 +125,7 @@ export default function ProductDetailScreen() {
 
           <View style={styles.priceRow}>
             <Text style={[styles.price, { color: theme.colors.cta }]}>
-              ${product.price.toFixed(2)}
+              {formatCurrency(product.price)}
             </Text>
             <View
               style={[
@@ -233,7 +234,7 @@ export default function ProductDetailScreen() {
           <Ionicons name="bag-add-outline" size={20} color="#FFFFFF" />
           <Text style={styles.addToCartText}>Add to Cart</Text>
           <Text style={styles.addToCartPrice}>
-            ${(product.price * quantity).toFixed(2)}
+            {formatCurrency(product.price * quantity)}
           </Text>
         </Pressable>
       </View>

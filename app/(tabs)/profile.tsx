@@ -5,15 +5,21 @@ import {
   StyleSheet,
   Pressable,
   Switch,
+  ImageBackground,
+  Linking,
 } from "react-native";
 import { Ionicons, Feather } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../theme/useTheme";
 import { ThemeName } from "../../types";
+import { getImageSource, images } from "../../constants/images";
+import { shop } from "../../constants/shop";
 
 export default function ProfileScreen() {
   const { theme, themeName, setTheme, themeLabels, allThemes } = useTheme();
 
   const themeIcons: Record<ThemeName, keyof typeof Ionicons.glyphMap> = {
+    noir: "contrast",
     aubergine: "water",
     rose: "flower-outline",
     midnight: "moon",
@@ -25,26 +31,76 @@ export default function ProfileScreen() {
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-          Profile
-        </Text>
-      </View>
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        <ImageBackground
+          source={getImageSource(images.banners.woody)}
+          style={styles.hero}
+          imageStyle={styles.heroImage}
+          resizeMode="cover"
+        >
+          <LinearGradient
+            colors={["rgba(0,0,0,0.08)", "rgba(0,0,0,0.84)"]}
+            style={styles.heroOverlay}
+          >
+            <Text style={styles.heroKicker}>Welcome to</Text>
+            <Text style={styles.heroTitle}>{shop.name}</Text>
+            <Text style={styles.heroCopy}>{shop.description}</Text>
+          </LinearGradient>
+        </ImageBackground>
+
+        <View style={styles.quickGrid}>
+          <Pressable
+            style={[styles.quickTile, { backgroundColor: theme.colors.surface }]}
+            onPress={() => Linking.openURL(`https://wa.me/${shop.whatsappNumber}`)}
+          >
+            <Ionicons name="logo-whatsapp" size={22} color="#25D366" />
+            <Text style={[styles.quickTitle, { color: theme.colors.primary }]}>
+              WhatsApp
+            </Text>
+            <Text
+              style={[styles.quickValue, { color: theme.colors.textSecondary }]}
+              numberOfLines={1}
+            >
+              {shop.phoneDisplay}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.quickTile, { backgroundColor: theme.colors.surface }]}
+            onPress={() =>
+              Linking.openURL(
+                `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  shop.location,
+                )}`,
+              )
+            }
+          >
+            <Feather name="map-pin" size={22} color={theme.colors.cta} />
+            <Text style={[styles.quickTitle, { color: theme.colors.primary }]}>
+              Location
+            </Text>
+            <Text
+              style={[styles.quickValue, { color: theme.colors.textSecondary }]}
+              numberOfLines={1}
+            >
+              {shop.location}
+            </Text>
+          </Pressable>
+        </View>
+
         <View
           style={[styles.section, { backgroundColor: theme.colors.surface }]}
         >
           <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>
-            Choose Theme
+            Store Mood
           </Text>
           <Text
             style={[styles.sectionSub, { color: theme.colors.textSecondary }]}
           >
-            Pick your vibe. Changes apply instantly.
+            Switch the app look. Naadu Noir adds the black palette.
           </Text>
         </View>
 
@@ -103,7 +159,7 @@ export default function ProfileScreen() {
           style={[styles.section, { backgroundColor: theme.colors.surface }]}
         >
           <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>
-            Settings
+            Shop Details
           </Text>
         </View>
 
@@ -118,13 +174,13 @@ export default function ProfileScreen() {
                 color={theme.colors.textSecondary}
               />
               <Text style={[styles.menuLabel, { color: theme.colors.primary }]}>
-                My Orders
+                WhatsApp Orders
               </Text>
             </View>
             <Ionicons
-              name="chevron-forward"
+              name="logo-whatsapp"
               size={18}
-              color={theme.colors.textSecondary}
+              color="#25D366"
             />
           </Pressable>
 
@@ -140,14 +196,12 @@ export default function ProfileScreen() {
                 color={theme.colors.textSecondary}
               />
               <Text style={[styles.menuLabel, { color: theme.colors.primary }]}>
-                Shipping Address
+                Pickup / Delivery Area
               </Text>
             </View>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={theme.colors.textSecondary}
-            />
+            <Text style={[styles.menuMeta, { color: theme.colors.textSecondary }]}>
+              {shop.location}
+            </Text>
           </Pressable>
 
           <View
@@ -162,7 +216,7 @@ export default function ProfileScreen() {
                 color={theme.colors.textSecondary}
               />
               <Text style={[styles.menuLabel, { color: theme.colors.primary }]}>
-                Notifications
+                Order Updates
               </Text>
             </View>
             <Switch
@@ -187,14 +241,12 @@ export default function ProfileScreen() {
                 color={theme.colors.textSecondary}
               />
               <Text style={[styles.menuLabel, { color: theme.colors.primary }]}>
-                About
+                About {shop.shortName}
               </Text>
             </View>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={theme.colors.textSecondary}
-            />
+            <Text style={[styles.menuMeta, { color: theme.colors.textSecondary }]}>
+              Beauty shelf
+            </Text>
           </Pressable>
 
           <View
@@ -209,14 +261,12 @@ export default function ProfileScreen() {
                 color={theme.colors.textSecondary}
               />
               <Text style={[styles.menuLabel, { color: theme.colors.primary }]}>
-                Help & Support
+                Call or Message
               </Text>
             </View>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={theme.colors.textSecondary}
-            />
+            <Text style={[styles.menuMeta, { color: theme.colors.textSecondary }]}>
+              {shop.phoneDisplay}
+            </Text>
           </Pressable>
         </View>
 
@@ -228,13 +278,61 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 8,
+  scrollContent: { paddingHorizontal: 20, paddingTop: 60 },
+  hero: {
+    height: 250,
+    borderRadius: 22,
+    overflow: "hidden",
+    marginBottom: 14,
   },
-  headerTitle: { fontSize: 28, fontWeight: "600", letterSpacing: 0.5 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
+  heroImage: {
+    borderRadius: 22,
+  },
+  heroOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    padding: 20,
+  },
+  heroKicker: {
+    color: "rgba(255,255,255,0.78)",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+  heroTitle: {
+    color: "#FFFFFF",
+    fontSize: 30,
+    fontWeight: "800",
+    lineHeight: 34,
+    marginTop: 4,
+  },
+  heroCopy: {
+    color: "rgba(255,255,255,0.82)",
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 19,
+    marginTop: 10,
+  },
+  quickGrid: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  quickTile: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 16,
+    gap: 5,
+  },
+  quickTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  quickValue: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
   section: {
     padding: 20,
     borderRadius: 16,
@@ -281,7 +379,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
+    flex: 1,
   },
   menuLabel: { fontSize: 15, fontWeight: "500" },
+  menuMeta: { fontSize: 12, fontWeight: "500", maxWidth: 130 },
   divider: { height: 0.5, marginLeft: 54 },
 });

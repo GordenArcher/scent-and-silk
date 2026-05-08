@@ -14,8 +14,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme/useTheme";
 import { getCart, clearCart } from "../storage/storage";
 import { CartItem } from "../types";
+import { formatCurrency, shop } from "../constants/shop";
 
-const WHATSAPP_NUMBER = "233XXXXXXXXX";
+const DELIVERY_FEE = 25;
+const FREE_DELIVERY_THRESHOLD = 300;
 
 export default function CheckoutScreen() {
   const { theme } = useTheme();
@@ -23,33 +25,33 @@ export default function CheckoutScreen() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
+  const [address, setAddress] = useState(shop.location);
   const [note, setNote] = useState("");
 
-  useFocusEffect(
-    useCallback(() => {
-      loadCart();
-    }, []),
-  );
-
-  const loadCart = async () => {
+  const loadCart = useCallback(async () => {
     const items = await getCart();
     if (items.length === 0) {
       router.back();
       return;
     }
     setCartItems(items);
-  };
+  }, [router]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCart();
+    }, [loadCart]),
+  );
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
     0,
   );
-  const delivery = subtotal > 100 ? 0 : 9.99;
+  const delivery = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
   const total = subtotal + delivery;
 
   const buildWhatsAppMessage = () => {
-    let message = `*New Order - Scent & Silk*\n\n`;
+    let message = `*New Order - ${shop.name}*\n\n`;
     message += `*Customer Details*\n`;
     message += `Name: ${name}\n`;
     message += `Phone: ${phone}\n`;
@@ -59,14 +61,14 @@ export default function CheckoutScreen() {
 
     cartItems.forEach((item, i) => {
       message += `\n${i + 1}. ${item.product.name} (${item.product.volume}ml)`;
-      message += `\n   Qty: ${item.quantity} x $${item.product.price.toFixed(2)}`;
-      message += `\n   Subtotal: $${(item.product.price * item.quantity).toFixed(2)}\n`;
+      message += `\n   Qty: ${item.quantity} x ${formatCurrency(item.product.price)}`;
+      message += `\n   Subtotal: ${formatCurrency(item.product.price * item.quantity)}\n`;
     });
 
     message += `\n*Summary*\n`;
-    message += `Subtotal: $${subtotal.toFixed(2)}\n`;
-    if (delivery > 0) message += `Delivery: $${delivery.toFixed(2)}\n`;
-    message += `*Total: $${total.toFixed(2)}*`;
+    message += `Subtotal: ${formatCurrency(subtotal)}\n`;
+    if (delivery > 0) message += `Delivery: ${formatCurrency(delivery)}\n`;
+    message += `*Total: ${formatCurrency(total)}*`;
 
     return message;
   };
@@ -82,7 +84,7 @@ export default function CheckoutScreen() {
 
     const message = buildWhatsAppMessage();
     const encoded = encodeURIComponent(message);
-    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`;
+    const url = `https://wa.me/${shop.whatsappNumber}?text=${encoded}`;
 
     try {
       await Linking.openURL(url);
@@ -204,13 +206,13 @@ export default function CheckoutScreen() {
                     { color: theme.colors.textSecondary },
                   ]}
                 >
-                  {item.quantity} x ${item.product.price.toFixed(2)}
+                  {item.quantity} x {formatCurrency(item.product.price)}
                 </Text>
               </View>
               <Text
                 style={[styles.summaryPrice, { color: theme.colors.primary }]}
               >
-                ${(item.product.price * item.quantity).toFixed(2)}
+                {formatCurrency(item.product.price * item.quantity)}
               </Text>
             </View>
           ))}
@@ -231,7 +233,7 @@ export default function CheckoutScreen() {
             <Text
               style={[styles.summaryValue, { color: theme.colors.primary }]}
             >
-              ${subtotal.toFixed(2)}
+              {formatCurrency(subtotal)}
             </Text>
           </View>
 
@@ -250,7 +252,7 @@ export default function CheckoutScreen() {
                 { color: delivery === 0 ? "#4CAF50" : theme.colors.primary },
               ]}
             >
-              {delivery === 0 ? "FREE" : `$${delivery.toFixed(2)}`}
+              {delivery === 0 ? "FREE" : formatCurrency(delivery)}
             </Text>
           </View>
 
@@ -263,7 +265,7 @@ export default function CheckoutScreen() {
               Total
             </Text>
             <Text style={[styles.totalValue, { color: theme.colors.cta }]}>
-              ${total.toFixed(2)}
+              {formatCurrency(total)}
             </Text>
           </View>
         </View>

@@ -12,15 +12,15 @@ interface ThemeContextType {
 }
 
 export const ThemeContext = createContext<ThemeContextType>({
-  theme: themes.aubergine,
-  themeName: "aubergine",
+  theme: themes.noir,
+  themeName: "noir",
   setTheme: () => {},
   themeLabels,
   allThemes: [],
 });
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [themeName, setThemeName] = useState<ThemeName>("aubergine");
+  const [themeName, setThemeName] = useState<ThemeName>("noir");
 
   useEffect(() => {
     (async () => {

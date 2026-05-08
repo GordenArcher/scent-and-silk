@@ -16,7 +16,11 @@ const TabIcon = ({
 }) => (
   <View style={styles.tabIcon}>
     {icon}
-    <Text style={[styles.tabLabel, { color, opacity: focused ? 1 : 0.5 }]}>
+    <Text
+      adjustsFontSizeToFit
+      numberOfLines={1}
+      style={[styles.tabLabel, { color, opacity: focused ? 1 : 0.5 }]}
+    >
       {label}
     </Text>
   </View>
@@ -66,7 +70,7 @@ export default function TabLayout() {
         options={{
           tabBarIcon: ({ focused, color }) => (
             <TabIcon
-              label="Discover"
+              label="Shop"
               icon={<Feather name="compass" size={22} color={color} />}
               focused={focused}
               color={color}
@@ -79,7 +83,7 @@ export default function TabLayout() {
         options={{
           tabBarIcon: ({ focused, color }) => (
             <TabIcon
-              label="Wishlist"
+              label="Saved"
               icon={
                 <Ionicons
                   name={focused ? "heart" : "heart-outline"}
@@ -111,7 +115,7 @@ export default function TabLayout() {
         options={{
           tabBarIcon: ({ focused, color }) => (
             <TabIcon
-              label="Profile"
+              label="Me"
               icon={<MaterialIcons name="palette" size={22} color={color} />}
               focused={focused}
               color={color}
@@ -128,9 +132,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
+    width: 58,
   },
   tabLabel: {
-    fontSize: 10,
-    fontWeight: "500",
+    width: 58,
+    fontSize: 9,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

@@ -1,11 +1,12 @@
 import { Product } from "../types";
 import { images } from "./images";
+import { shop } from "./shop";
 
 export const products: Product[] = [
   {
     id: "1",
     name: "Velvet Oud",
-    brand: "Scent & Silk",
+    brand: shop.shortName,
     price: 89.99,
     description:
       "A rich symphony of aged oud, vanilla bean, and smoky amber. Wraps you in warmth that lingers for hours.",
@@ -17,7 +18,7 @@ export const products: Product[] = [
   {
     id: "2",
     name: "Rose Eclipse",
-    brand: "Scent & Silk",
+    brand: shop.shortName,
     price: 74.99,
     description:
       "Bulgarian rose meets dark musk and pink pepper. Bold, romantic, unforgettable.",
@@ -29,7 +30,7 @@ export const products: Product[] = [
   {
     id: "3",
     name: "Silk Bloom",
-    brand: "Scent & Silk",
+    brand: shop.shortName,
     price: 69.99,
     description:
       "Jasmine petals, white tea, and soft cedar. Like slipping into clean silk sheets.",
@@ -41,7 +42,7 @@ export const products: Product[] = [
   {
     id: "4",
     name: "Golden Hour",
-    brand: "Scent & Silk",
+    brand: shop.shortName,
     price: 95.99,
     description:
       "Saffron, honeyed tobacco, and leather. The scent of sunset in a bottle.",
@@ -53,7 +54,7 @@ export const products: Product[] = [
   {
     id: "5",
     name: "Ocean Mist",
-    brand: "Scent & Silk",
+    brand: shop.shortName,
     price: 59.99,
     description:
       "Sea salt, lime zest, and driftwood. Crisp, clean, endlessly refreshing.",
@@ -65,7 +66,7 @@ export const products: Product[] = [
   {
     id: "6",
     name: "Noir Vanille",
-    brand: "Scent & Silk",
+    brand: shop.shortName,
     price: 82.99,
     description:
       "Madagascar vanilla, dark cocoa, and tonka bean. Sweet but dangerously deep.",
@@ -77,7 +78,7 @@ export const products: Product[] = [
   {
     id: "7",
     name: "Amber Dusk",
-    brand: "Scent & Silk",
+    brand: shop.shortName,
     price: 79.99,
     description:
       "Warm amber resin, cardamom, and a whisper of incense. Earthy and sensual.",
@@ -89,7 +90,7 @@ export const products: Product[] = [
   {
     id: "8",
     name: "White Peony",
-    brand: "Scent & Silk",
+    brand: shop.shortName,
     price: 67.99,
     description:
       "Peony, lychee, and soft musk. Light as air, pretty as spring.",
@@ -101,7 +102,7 @@ export const products: Product[] = [
   {
     id: "9",
     name: "Cedar & Embers",
-    brand: "Scent & Silk",
+    brand: shop.shortName,
     price: 88.99,
     description:
       "Smoked cedar, clove, and black tea. A fireside evening captured in glass.",
@@ -113,7 +114,7 @@ export const products: Product[] = [
   {
     id: "10",
     name: "Citrus Silk",
-    brand: "Scent & Silk",
+    brand: shop.shortName,
     price: 54.99,
     description:
       "Grapefruit, neroli, and white musk. Zesty, smooth, effortlessly chic.",
@@ -125,7 +126,7 @@ export const products: Product[] = [
   {
     id: "11",
     name: "Santal Royale",
-    brand: "Scent & Silk",
+    brand: shop.shortName,
     price: 99.99,
     description:
       "Creamy sandalwood, orris butter, and a touch of coconut. Pure luxury.",
@@ -137,7 +138,7 @@ export const products: Product[] = [
   {
     id: "12",
     name: "Midnight Jasmine",
-    brand: "Scent & Silk",
+    brand: shop.shortName,
     price: 72.99,
     description:
       "Night-blooming jasmine, black currant, and sheer amber. Mysterious and magnetic.",
@@ -158,9 +159,9 @@ export const categories = [
 ];
 
 export const heroPhrases = [
-  "Find your signature scent...",
-  "Silk in a bottle...",
-  "Wear your aura...",
-  "Luxury that lingers...",
-  "Your scent, your silk...",
+  "Welcome to Scent Hub by Naadu...",
+  "Campus-ready glow essentials...",
+  "Fresh scents near Pentecost Uni...",
+  "Order fast on WhatsApp...",
+  "Beauty picks curated by Naadu...",
 ];

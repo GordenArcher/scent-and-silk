@@ -1,6 +1,23 @@
 import { Theme, ThemeName } from "../types";
 
 export const themes: Record<ThemeName, Theme> = {
+  noir: {
+    name: "noir",
+    colors: {
+      background: "#050505",
+      surface: "#F7F2EA",
+      primary: "#101010",
+      accent: "#D7B56D",
+      text: "#F7F2EA",
+      textSecondary: "#B9A98C",
+      border: "#2A2620",
+      cta: "#C99A2E",
+      tabBar: "#050505",
+      tabBarActive: "#D7B56D",
+      tabBarInactive: "#5C5448",
+      statusBar: "light",
+    },
+  },
   aubergine: {
     name: "aubergine",
     colors: {
@@ -89,6 +106,7 @@ export const themes: Record<ThemeName, Theme> = {
 };
 
 export const themeLabels: Record<ThemeName, string> = {
+  noir: "Naadu Noir",
   aubergine: "Aubergine Luxe",
   rose: "Rose Quartz",
   midnight: "Midnight Oud",
