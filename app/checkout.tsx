@@ -1,5 +1,7 @@
 import { useState, useCallback } from "react";
 import {
+  ActivityIndicator,
+  Modal,
   View,
   Text,
   ScrollView,
@@ -9,24 +11,33 @@ import {
   Alert,
   Linking,
 } from "react-native";
+import { WebView, WebViewMessageEvent } from "react-native-webview";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme/useTheme";
 import { getCart, clearCart } from "../storage/storage";
 import { CartItem } from "../types";
 import { formatCurrency, shop } from "../constants/shop";
+import { paystack, toPaystackSubunit } from "../constants/paystack";
 
 const DELIVERY_FEE = 25;
 const FREE_DELIVERY_THRESHOLD = 300;
+
+const generatePaymentReference = () =>
+  `SHN-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export default function CheckoutScreen() {
   const { theme } = useTheme();
   const router = useRouter();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState(shop.location);
   const [note, setNote] = useState("");
+  const [paymentHtml, setPaymentHtml] = useState("");
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadCart = useCallback(async () => {
     const items = await getCart();
@@ -50,13 +61,20 @@ export default function CheckoutScreen() {
   const delivery = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
   const total = subtotal + delivery;
 
-  const buildWhatsAppMessage = () => {
+  const buildWhatsAppMessage = (paymentReference?: string) => {
     let message = `*New Order - ${shop.name}*\n\n`;
     message += `*Customer Details*\n`;
     message += `Name: ${name}\n`;
+    message += `Email: ${email}\n`;
     message += `Phone: ${phone}\n`;
     message += `Address: ${address}\n`;
     if (note) message += `Note: ${note}\n`;
+    if (paymentReference) {
+      message += `Payment: Paid via Paystack\n`;
+      message += `Paystack Reference: ${paymentReference}\n`;
+    } else {
+      message += `Payment: Pending confirmation\n`;
+    }
     message += `\n*Order Items*\n`;
 
     cartItems.forEach((item, i) => {
@@ -73,25 +91,191 @@ export default function CheckoutScreen() {
     return message;
   };
 
-  const handlePlaceOrder = async () => {
+  const validateDetails = (requiresEmail: boolean) => {
     if (!name.trim() || !phone.trim() || !address.trim()) {
       Alert.alert(
         "Missing Info",
         "Please fill in your name, phone, and address.",
       );
-      return;
+      return false;
     }
 
-    const message = buildWhatsAppMessage();
+    if (requiresEmail && !email.trim()) {
+      Alert.alert("Missing Email", "Please enter your email for Paystack.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const sendWhatsAppOrder = async (paymentReference?: string) => {
+    const message = buildWhatsAppMessage(paymentReference);
     const encoded = encodeURIComponent(message);
     const url = `https://wa.me/${shop.whatsappNumber}?text=${encoded}`;
 
+    await Linking.openURL(url);
+    await clearCart();
+    router.replace("/cart");
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!validateDetails(false)) return;
+
     try {
-      await Linking.openURL(url);
-      await clearCart();
-      router.replace("/cart");
+      await sendWhatsAppOrder();
     } catch {
       Alert.alert("Error", "Could not open WhatsApp. Please try again.");
+    }
+  };
+
+  const buildPaystackHtml = (reference: string) => {
+    const paymentConfig = {
+      key: paystack.publicKey,
+      email: email.trim(),
+      amount: toPaystackSubunit(total),
+      currency: paystack.currency,
+      ref: reference,
+      firstname: name.trim().split(" ")[0] || name.trim(),
+      phone: phone.trim(),
+      channels: ["card", "bank", "ussd", "qr", "mobile_money", "bank_transfer"],
+      metadata: {
+        custom_fields: [
+          {
+            display_name: "Customer Name",
+            variable_name: "customer_name",
+            value: name.trim(),
+          },
+          {
+            display_name: "Phone",
+            variable_name: "phone",
+            value: phone.trim(),
+          },
+          {
+            display_name: "Delivery Address",
+            variable_name: "delivery_address",
+            value: address.trim(),
+          },
+        ],
+      },
+    };
+
+    return `
+      <!doctype html>
+      <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <script src="https://js.paystack.co/v1/inline.js"></script>
+          <style>
+            html, body {
+              align-items: center;
+              background: #050505;
+              color: #f7f2ea;
+              display: flex;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+              height: 100%;
+              justify-content: center;
+              margin: 0;
+              text-align: center;
+            }
+            p { color: #b9a98c; }
+          </style>
+        </head>
+        <body>
+          <main>
+            <h3>Opening Paystack...</h3>
+            <p>Please keep this screen open.</p>
+          </main>
+          <script>
+            const postToApp = (payload) => {
+              window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+            };
+
+            let hasStarted = false;
+
+            const startPayment = () => {
+              if (hasStarted) return;
+              hasStarted = true;
+
+              try {
+                if (!window.PaystackPop) {
+                  hasStarted = false;
+                  postToApp({
+                    type: "error",
+                    message: "Paystack checkout did not load. Please check your internet connection."
+                  });
+                  return;
+                }
+
+                const handler = window.PaystackPop.setup({
+                  ...${JSON.stringify(paymentConfig)},
+                  callback: (transaction) => {
+                    postToApp({ type: "success", transaction });
+                  },
+                  onClose: () => {
+                    postToApp({ type: "cancel" });
+                  }
+                });
+                handler.openIframe();
+              } catch (error) {
+                postToApp({
+                  type: "error",
+                  message: error && error.message ? error.message : "Paystack could not start."
+                });
+              }
+            };
+
+            window.addEventListener("load", startPayment);
+            setTimeout(startPayment, 1500);
+          </script>
+        </body>
+      </html>
+    `;
+  };
+
+  const handlePayWithPaystack = () => {
+    if (!validateDetails(true)) return;
+
+    if (!paystack.publicKey) {
+      Alert.alert(
+        "Paystack Key Missing",
+        "Add EXPO_PAYSTACK_PUBLIC_KEY or EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY to your .env file.",
+      );
+      return;
+    }
+
+    const reference = generatePaymentReference();
+    setPaymentHtml(buildPaystackHtml(reference));
+    setIsPaymentOpen(true);
+  };
+
+  const handlePaystackMessage = async (event: WebViewMessageEvent) => {
+    try {
+      const payload = JSON.parse(event.nativeEvent.data);
+
+      if (payload.type === "success") {
+        const reference =
+          payload.transaction?.reference || payload.transaction?.trxref;
+        setIsSubmitting(true);
+        setIsPaymentOpen(false);
+        await sendWhatsAppOrder(reference);
+        return;
+      }
+
+      if (payload.type === "cancel") {
+        setIsPaymentOpen(false);
+        Alert.alert("Payment Cancelled", "No payment was taken.");
+        return;
+      }
+
+      if (payload.type === "error") {
+        setIsPaymentOpen(false);
+        Alert.alert("Payment Error", payload.message || "Paystack failed.");
+      }
+    } catch {
+      setIsPaymentOpen(false);
+      Alert.alert("Payment Error", "Could not read the Paystack response.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -145,6 +329,26 @@ export default function CheckoutScreen() {
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
+          />
+
+          <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
+            Email Address
+          </Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: theme.colors.background,
+                color: theme.colors.text,
+                borderColor: theme.colors.border,
+              },
+            ]}
+            placeholder="name@example.com"
+            placeholderTextColor={theme.colors.textSecondary}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
           />
 
           <Text style={[styles.label, { color: theme.colors.textSecondary }]}>
@@ -273,11 +477,12 @@ export default function CheckoutScreen() {
         <View
           style={[styles.noteBox, { backgroundColor: theme.colors.primary }]}
         >
-          <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
+          <Ionicons name="card-outline" size={20} color={theme.colors.cta} />
           <Text
             style={[styles.noteText, { color: theme.colors.textSecondary }]}
           >
-            Your order will be sent via WhatsApp for confirmation and payment.
+            Pay securely with Paystack. After payment, the order details and
+            reference will open in WhatsApp for confirmation.
           </Text>
         </View>
 
@@ -295,12 +500,56 @@ export default function CheckoutScreen() {
       >
         <Pressable
           style={[styles.orderBtn, { backgroundColor: theme.colors.cta }]}
-          onPress={handlePlaceOrder}
+          onPress={handlePayWithPaystack}
+          disabled={isSubmitting}
         >
-          <Ionicons name="logo-whatsapp" size={20} color="#FFFFFF" />
-          <Text style={styles.orderBtnText}>Send Order via WhatsApp</Text>
+          {isSubmitting ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Ionicons name="card-outline" size={20} color="#FFFFFF" />
+          )}
+          <Text style={styles.orderBtnText}>Pay with Paystack</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.whatsappBtn, { borderColor: theme.colors.border }]}
+          onPress={handlePlaceOrder}
+          disabled={isSubmitting}
+        >
+          <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
+          <Text style={[styles.whatsappBtnText, { color: theme.colors.text }]}>
+            Send WhatsApp Order
+          </Text>
         </Pressable>
       </View>
+
+      <Modal
+        visible={isPaymentOpen}
+        animationType="slide"
+        onRequestClose={() => setIsPaymentOpen(false)}
+      >
+        <View style={[styles.webviewHeader, { backgroundColor: theme.colors.primary }]}>
+          <Text style={[styles.webviewTitle, { color: theme.colors.text }]}>
+            Paystack Checkout
+          </Text>
+          <Pressable onPress={() => setIsPaymentOpen(false)}>
+            <Ionicons name="close" size={24} color={theme.colors.text} />
+          </Pressable>
+        </View>
+        {paymentHtml ? (
+          <WebView
+            originWhitelist={["*"]}
+            source={{ html: paymentHtml, baseUrl: "https://checkout.paystack.com" }}
+            javaScriptEnabled
+            domStorageEnabled
+            onMessage={handlePaystackMessage}
+            startInLoadingState
+          />
+        ) : (
+          <View style={styles.loadingPayment}>
+            <ActivityIndicator color={theme.colors.cta} />
+          </View>
+        )}
+      </Modal>
     </View>
   );
 }
@@ -363,4 +612,29 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   orderBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+  whatsappBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 10,
+    paddingVertical: 12,
+    borderRadius: 25,
+    borderWidth: 1,
+  },
+  whatsappBtnText: { fontSize: 14, fontWeight: "600" },
+  webviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 18,
+    paddingTop: 56,
+    paddingBottom: 14,
+  },
+  webviewTitle: { fontSize: 17, fontWeight: "700" },
+  loadingPayment: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });
